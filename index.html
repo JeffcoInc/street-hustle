@@ -5,52 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Street Hustle</title>
 <style>
-:root {
-  --bg: #0a0a0f;
-  --card: #16161d;
-  --text: #e0e0e0;
-  --accent: #00ffcc;
-  --danger: #ff3366;
-  --profit: #00ff88;
-  --debt: #ff5555;
-}
+:root { --bg: #0a0a0f; --card: #16161d; --text: #e0e0e0; --accent: #00ffcc; --profit: #00ff88; --debt: #ff5555; }
 * { box-sizing: border-box; }
-body {
-  margin: 0; padding: 10px;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 16px;
-  max-width: 480px;
-  margin: 0 auto;
-}
-.hud {
-  display: flex; justify-content: space-between;
-  background: var(--card); padding: 12px; border-radius: 12px;
-  margin-bottom: 12px; font-weight: 600;
-}
-.hud span { color: var(--accent); }
-.hud .debt { color: var(--debt); }
-h2 { margin: 8px 0; font-size: 18px; }
-.goods, .cities { display: grid; gap: 8px; }
-.card {
-  background: var(--card); padding: 12px; border-radius: 10px;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.card button {
-  background: var(--accent); color: #000; border: none;
-  padding: 8px 14px; border-radius: 8px; font-weight: bold; margin-left: 6px;
-}
-.card button.sell { background: var(--profit); }
+body { margin: 0; padding: 10px; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 16px; max-width: 480px; margin: 0 auto; }
+.hud { display: flex; justify-content: space-between; background: var(--card); padding: 12px; border-radius: 12px; margin-bottom: 12px; font-weight: 600; }
+.hud span { color: var(--accent); } .hud .debt { color: var(--debt); }
 .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-.tabs button {
-  flex: 1; padding: 12px; background: var(--card); color: var(--text);
-  border: none; border-radius: 10px; font-weight: 600;
-}
+.tabs button { flex: 1; padding: 12px; background: var(--card); color: var(--text); border: none; border-radius: 10px; font-weight: 600; }
 .tabs button.active { background: var(--accent); color: #000; }
-#event { background: #222; padding: 12px; border-radius: 10px; margin: 8px 0; display: none; }
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; }
-.modal-content { background: var(--card); padding: 20px; border-radius: 16px; text-align: center; max-width: 90%; }
+.card { background: var(--card); padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; transition: transform 0.1s; }
+.card button { background: var(--accent); color: #000; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; }
+.card button.sell { background: var(--profit); }
+#map svg { width: 100%; height: 300px; background: #111; border-radius: 12px; }
+.city-node { cursor: pointer; fill: #444; stroke: #00ffcc; stroke-width: 2; }
+.city-node.current { fill: #00ffcc; }
+.city-node:hover { fill: #00aa88; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 100; }
+.modal-content { background: var(--card); padding: 20px; border-radius: 16px; text-align: center; max-width: 90%; animation: slideIn 0.3s; }
+@keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.flash { animation: flash 0.4s; }
+@keyframes flash { 50% { background: #00ffcc33; } }
 </style>
 </head>
 <body>
@@ -61,135 +35,139 @@ h2 { margin: 8px 0; font-size: 18px; }
 </div>
 <div class="tabs">
   <button class="active" onclick="showTab('market')">Market</button>
-  <button onclick="showTab('travel')">Travel</button>
+  <button onclick="showTab('map')">Map</button>
   <button onclick="showTab('inv')">Inventory</button>
 </div>
 <div id="market"></div>
-<div id="travel" style="display:none"></div>
-<div id="inv" style="display:none"></div>
-<div id="event"></div>
-<div class="modal" id="endModal">
-  <div class="modal-content">
-    <h2>Run Complete</h2>
-    <p id="finalScore"></p>
-    <button onclick="buyExtra()">Buy +10 Days ($1.99)</button>
-    <button onclick="newGame()">New Game</button>
-  </div>
+<div id="map" style="display:none">
+  <svg id="mapSvg" viewBox="0 0 400 300">
+    <!-- Simple US-style positions -->
+    <circle class="city-node" cx="80" cy="80" r="12" data-city="0" onclick="travel(0)"></circle>
+    <text x="80" y="70" fill="#aaa" font-size="10" text-anchor="middle">Bronx</text>
+    <circle class="city-node" cx="100" cy="100" r="12" data-city="1" onclick="travel(1)"></circle>
+    <text x="100" y="90" fill="#aaa" font-size="10" text-anchor="middle">Brooklyn</text>
+    <circle class="city-node" cx="90" cy="60" r="12" data-city="2" onclick="travel(2)"></circle>
+    <text x="90" y="50" fill="#aaa" font-size="10" text-anchor="middle">Manhattan</text>
+    <circle class="city-node" cx="120" cy="90" r="12" data-city="3" onclick="travel(3)"></circle>
+    <text x="120" y="80" fill="#aaa" font-size="10" text-anchor="middle">Queens</text>
+    <circle class="city-node" cx="200" cy="180" r="12" data-city="4" onclick="travel(4)"></circle>
+    <text x="200" y="170" fill="#aaa" font-size="10" text-anchor="middle">Miami</text>
+    <circle class="city-node" cx="50" cy="150" r="12" data-city="5" onclick="travel(5)"></circle>
+    <text x="50" y="140" fill="#aaa" font-size="10" text-anchor="middle">LA</text>
+    <circle class="city-node" cx="180" cy="100" r="12" data-city="6" onclick="travel(6)"></circle>
+    <text x="180" y="90" fill="#aaa" font-size="10" text-anchor="middle">Chicago</text>
+    <circle class="city-node" cx="80" cy="140" r="12" data-city="7" onclick="travel(7)"></circle>
+    <text x="80" y="130" fill="#aaa" font-size="10" text-anchor="middle">Vegas</text>
+  </svg>
+  <p style="text-align:center; color:#888;">Click a city to travel</p>
 </div>
+<div id="inv" style="display:none"></div>
+<div class="modal" id="eventModal"><div class="modal-content" id="eventContent"></div></div>
+<div class="modal" id="endModal"><div class="modal-content"><h2>Run Complete</h2><p id="finalScore"></p><button onclick="buyExtra()">Buy +10 Days</button><button onclick="newGame()">New Game</button></div></div>
 <script>
-const GOODS = [
-  {name: "Weed", min: 300, max: 900},
-  {name: "Cocaine", min: 15000, max: 30000},
-  {name: "Heroin", min: 5000, max: 14000},
-  {name: "Acid", min: 1000, max: 4500},
-  {name: "Speed", min: 70, max: 250},
-  {name: "Ludes", min: 10, max: 60},
-  {name: "Ecstasy", min: 200, max: 800},
-  {name: "Meth", min: 100, max: 600}
-];
-const CITIES = ["Bronx", "Brooklyn", "Manhattan", "Queens", "Miami", "LA", "Chicago", "Vegas"];
-let state = {
-  cash: 2000, debt: 5500, day: 1, maxDays: 30,
-  city: 0, inventory: {}, prices: {}, capacity: 100
-};
-function newPrices() {
-  state.prices = {};
-  GOODS.forEach(g => {
-    state.prices[g.name] = Math.floor(Math.random() * (g.max - g.min) + g.min);
-  });
+const GOODS = [{name:"Weed",min:300,max:900},{name:"Cocaine",min:15000,max:30000},{name:"Heroin",min:5000,max:14000},{name:"Acid",min:1000,max:4500},{name:"Speed",min:70,max:250},{name:"Ludes",min:10,max:60},{name:"Ecstasy",min:200,max:800},{name:"Meth",min:100,max:600}];
+const CITIES = ["Bronx","Brooklyn","Manhattan","Queens","Miami","LA","Chicago","Vegas"];
+let state = {cash:2000,debt:5500,day:1,maxDays:30,city:0,inventory:{},prices:{},capacity:100};
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playTone(freq, duration=0.15) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.frequency.value = freq; gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+  osc.start(); osc.stop(audioCtx.currentTime + duration);
+}
+function haptic(pattern=50) { if (navigator.vibrate) navigator.vibrate(pattern); }
+function newPrices() { state.prices = {}; GOODS.forEach(g => state.prices[g.name] = Math.floor(Math.random()*(g.max-g.min)+g.min)); }
+function updateMap() {
+  document.querySelectorAll('.city-node').forEach((n,i) => n.classList.toggle('current', i === state.city));
 }
 function render() {
   document.getElementById("cash").textContent = state.cash.toLocaleString();
   document.getElementById("debt").textContent = state.debt.toLocaleString();
   document.getElementById("day").textContent = state.day;
-  // Market
+  updateMap();
   let m = document.getElementById("market");
   m.innerHTML = "<h2>" + CITIES[state.city] + " Market</h2>";
   GOODS.forEach(g => {
-    const price = state.prices[g.name];
-    const inv = state.inventory[g.name] || 0;
-    m.innerHTML += `<div class="card">
-      <div>${g.name}<br><small>$${price.toLocaleString()}</small></div>
-      <div>
-        <button onclick="buy('${g.name}', 1)">Buy</button>
-        <button class="sell" onclick="sell('${g.name}', 1)">Sell (${inv})</button>
-      </div>
-    </div>`;
+    const price = state.prices[g.name]; const inv = state.inventory[g.name]||0;
+    m.innerHTML += `<div class="card"><div>${g.name}<br><small>$${price.toLocaleString()}</small></div><div><button onclick="buy('${g.name}',1)">Buy</button><button class="sell" onclick="sell('${g.name}',1)">Sell (${inv})</button></div></div>`;
   });
-  // Travel
-  let t = document.getElementById("travel");
-  t.innerHTML = "<h2>Travel</h2>";
-  CITIES.forEach((c, i) => {
-    if (i !== state.city) {
-      t.innerHTML += `<div class="card"><div>${c}</div><button onclick="travel(${i})">Go</button></div>`;
-    }
-  });
-  // Inventory
   let invDiv = document.getElementById("inv");
   invDiv.innerHTML = "<h2>Inventory (" + Object.values(state.inventory).reduce((a,b)=>a+(b||0),0) + "/" + state.capacity + ")</h2>";
-  GOODS.forEach(g => {
-    const q = state.inventory[g.name] || 0;
-    if (q > 0) invDiv.innerHTML += `<div class="card"><div>${g.name}: ${q}</div></div>`;
-  });
+  GOODS.forEach(g => { const q = state.inventory[g.name]||0; if(q>0) invDiv.innerHTML += `<div class="card"><div>${g.name}: ${q}</div></div>`; });
 }
-function buy(name, qty) {
-  const price = state.prices[name];
-  const cost = price * qty;
+function buy(name,qty) {
+  const price = state.prices[name]; const cost = price*qty;
   const current = Object.values(state.inventory).reduce((a,b)=>a+(b||0),0);
   if (state.cash >= cost && current + qty <= state.capacity) {
-    state.cash -= cost;
-    state.inventory[name] = (state.inventory[name] || 0) + qty;
+    state.cash -= cost; state.inventory[name] = (state.inventory[name]||0)+qty;
+    playTone(800); haptic(30); document.getElementById("cash").classList.add("flash"); setTimeout(()=>document.getElementById("cash").classList.remove("flash"),400);
     render();
   }
 }
-function sell(name, qty) {
-  const have = state.inventory[name] || 0;
+function sell(name,qty) {
+  const have = state.inventory[name]||0;
   if (have >= qty) {
-    state.cash += state.prices[name] * qty;
-    state.inventory[name] -= qty;
-    if (state.inventory[name] === 0) delete state.inventory[name];
+    state.cash += state.prices[name]*qty; state.inventory[name]-=qty;
+    if (state.inventory[name]===0) delete state.inventory[name];
+    playTone(1200); haptic(30); document.getElementById("cash").classList.add("flash"); setTimeout(()=>document.getElementById("cash").classList.remove("flash"),400);
     render();
   }
 }
 function travel(to) {
-  state.city = to;
-  state.day++;
-  state.debt = Math.floor(state.debt * 1.1);
-  newPrices();
-  if (Math.random() < 0.2) showEvent();
-  if (state.day > state.maxDays) endGame();
-  else render();
+  if (to === state.city) return;
+  state.city = to; state.day++; state.debt = Math.floor(state.debt * 1.1);
+  newPrices(); playTone(400, 0.3); haptic([100,50,100]);
+  if (Math.random() < 0.4) triggerEvent();
+  if (state.day > state.maxDays) endGame(); else render();
 }
-function showEvent() {
-  const e = document.getElementById("event");
-  e.style.display = "block";
-  e.innerHTML = "Random event: Prices are wild today!";
-  setTimeout(() => e.style.display = "none", 2000);
+function triggerEvent() {
+  const events = [
+    {title:"Police Stop!", text:"Officer Hardass pulls you over. What do you do?", choices:["Bribe $500","Run","Fight"]},
+    {title:"Mugger!", text:"A mugger jumps you in the alley!", choices:["Give Cash","Fight"]},
+    {title:"Crackhead", text:"A crackhead approaches offering a 'deal'.", choices:["Ignore","Give Free Sample","Sell High"]},
+    {title:"Lucky Find", text:"You found a stash of free goods!", choices:["Take It"]}
+  ];
+  const ev = events[Math.floor(Math.random()*events.length)];
+  const modal = document.getElementById("eventModal");
+  const content = document.getElementById("eventContent");
+  content.innerHTML = `<h3>${ev.title}</h3><p>${ev.text}</p>` + ev.choices.map((c,i)=>`<button onclick="handleEvent(${i}, '${ev.title}')">${c}</button>`).join(" ");
+  modal.style.display = "flex"; playTone(200, 0.4); haptic(200);
+}
+function handleEvent(choice, title) {
+  document.getElementById("eventModal").style.display = "none";
+  if (title.includes("Police")) {
+    if (choice===0 && state.cash>=500) { state.cash-=500; playTone(300); }
+    else if (choice===1 && Math.random()<0.6) { /* success */ playTone(600); }
+    else { state.cash = Math.max(0, state.cash-200); playTone(150); }
+  } else if (title.includes("Mugger")) {
+    state.cash = Math.max(0, state.cash - Math.floor(state.cash*0.2)); playTone(180);
+  } else if (title.includes("Crackhead")) {
+    if (choice===1) { /* free sample effect */ playTone(500); }
+    else if (choice===2) state.cash += 300; playTone(700);
+  } else if (title.includes("Lucky")) {
+    const g = GOODS[Math.floor(Math.random()*GOODS.length)].name;
+    state.inventory[g] = (state.inventory[g]||0)+5; playTone(900);
+  }
+  render();
 }
 function endGame() {
   const score = state.cash - state.debt;
   document.getElementById("finalScore").textContent = "Final: $" + score.toLocaleString();
   document.getElementById("endModal").style.display = "flex";
 }
-function buyExtra() {
-  state.maxDays += 10;
-  document.getElementById("endModal").style.display = "none";
-  alert("Extra 10 days purchased! (mock)");
-  render();
-}
+function buyExtra() { state.maxDays += 10; document.getElementById("endModal").style.display = "none"; alert("Extra days added!"); render(); }
 function newGame() {
-  state = { cash: 2000, debt: 5500, day: 1, maxDays: 30, city: 0, inventory: {}, prices: {}, capacity: 100 };
-  newPrices();
-  document.getElementById("endModal").style.display = "none";
-  render();
+  state = {cash:2000,debt:5500,day:1,maxDays:30,city:0,inventory:{},prices:{},capacity:100};
+  newPrices(); document.getElementById("endModal").style.display = "none"; render();
 }
 function showTab(tab) {
-  ["market","travel","inv"].forEach(t => document.getElementById(t).style.display = t === tab ? "block" : "none");
+  ["market","map","inv"].forEach(t => document.getElementById(t).style.display = t===tab ? "block" : "none");
   document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
   event.target.classList.add("active");
 }
-newPrices();
-render();
+newPrices(); render();
 </script>
 </body>
 </html>
